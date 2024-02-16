@@ -1,0 +1,152 @@
+
+% This script generates a matrix of randomized customer locations 
+% and uses it to run all three algorithms (TSP, SABR, and CABR)
+% and compare between them.
+% The code returns Total Distance, CO2 Emissions, runtime of each algorithm,
+% routes, and path cost.
+
+% Elis Cucka and Mikhail Smirnov
+
+
+numCustomers = 10;
+iterations = 2;
+depotCoordinates = [2 2];
+blockLength = 30;
+blockWidth = 10;
+streetWidth = 2; 
+
+
+% Initialize routes ------------------------------------------------------
+% Each route is each row, each column is each customer
+                                   % Customers + depot
+i_Truck_Route_TSP = zeros(iterations, numCustomers + 2);
+i_E_Tricycle_Route_SABR = zeros(iterations, numCustomers/2 + 2); 
+i_E_Truck_Route_SABR = zeros(iterations, numCustomers/2 + 2);
+i_E_Tricycle_Route_CABR = zeros(iterations, numCustomers + 2); 
+i_E_Truck_Route_CABR = zeros(iterations, numCustomers + 2);
+% ------------------------------------------------------------------------
+
+% Initialize/preallocating other variables (this should speed up execution)
+
+time_TSP = zeros(1, iterations);
+time_SABR = zeros(1, iterations);
+time_CABR = zeros(1, iterations);
+pathcost_TSP_Array = zeros(1, iterations);
+pathcost_SABR_Array = zeros(1, iterations);
+pathcost_CABR_Array = zeros(1, iterations);
+CO2_TSP_Array = zeros(1, iterations);
+CO2_SABR_Array = zeros(1, iterations);
+CO2_CABR_Array = zeros(1, iterations);
+
+% Run each algorithm: ----------------------------------------------------
+for i = 1:iterations                                                                           %  Replacement,     Plot on/off 
+    i
+    C = generateCustomers_intGrid_adjustable(numCustomers, blockLength, blockWidth, streetWidth,    true,          false);
+
+    % C matrix gets turned into matrices T, A, B, Cluster1 and Cluster 2
+    % for TSP, E-Tricycle/E-Truck SABR, E-Tricycle/E-Truck CABR respectively
+    % which all already contain depots as the first and last customer.
+    
+    % Rearranges each customer location matrix in order of GA's routes
+    % [NodeColumn; xCoordColumn; yCoordColumn]
+    
+    
+    
+
+    tic
+    % Traveling Salesman Problem
+    [Truck_Route_TSP, T] = MainGA_TSP(C, depotCoordinates);
+
+    Truck_TSP_Matrix = nodeCoords(T, Truck_Route_TSP, depotCoordinates);
+
+    % Truck TSP:
+    for j=1:length(Truck_TSP_Matrix)-1
+        [Truck_TSP_Optimal_Path, Truck_TSP_path_cost(j)] = AStar(Truck_TSP_Matrix(j, 2), Truck_TSP_Matrix(j, 3), Truck_TSP_Matrix(j+1, 2), Truck_TSP_Matrix(j+1, 3), j, blockLength, blockWidth, streetWidth, length(Truck_TSP_Matrix));
+        
+        %path_matrix(:, :, i) = Optimal_Path;
+    end
+    % Outputs
+    time_TSP(i) = toc;
+    i_Truck_Route_TSP(i, :) = Truck_Route_TSP;
+    
+
+
+    tic
+    % Speed Area Based Routing
+    [E_Tricycle_Route_SABR, E_Truck_Route_SABR, A, B] = MainGA_SABR(C, depotCoordinates);
+    E_Tricycle_SABR_Matrix = nodeCoords(A, E_Tricycle_Route_SABR, depotCoordinates);
+    E_Truck_SABR_Matrix = nodeCoords(B, E_Truck_Route_SABR, depotCoordinates);
+     % E-Tricycle SABR:
+    for j=1:length(E_Tricycle_SABR_Matrix)-1
+         [E_Tricycle_SABR_Optimal_Path, E_Tricycle_SABR_path_cost(j)] = AStar(E_Tricycle_SABR_Matrix(j, 2), E_Tricycle_SABR_Matrix(j, 3), E_Tricycle_SABR_Matrix(j+1, 2), E_Tricycle_SABR_Matrix(j+1, 3), j, blockLength, blockWidth, streetWidth, length(E_Tricycle_SABR_Matrix));
+    end
+    % E-Truck SABR:
+    for j=1:length(E_Truck_SABR_Matrix)-1
+        [E_Truck_SABR_Optimal_Path, E_Truck_SABR_path_cost(j)] = AStar_2(E_Truck_SABR_Matrix(j, 2), E_Truck_SABR_Matrix(j, 3), E_Truck_SABR_Matrix(j+1, 2), E_Truck_SABR_Matrix(j+1, 3), j, blockLength, blockWidth, streetWidth, length(E_Truck_SABR_Matrix));
+    end
+    % Outputs
+    time_SABR(i) = toc;
+    i_E_Tricycle_Route_SABR(i, :) = E_Tricycle_Route_SABR(1,:);
+    i_E_Truck_Route_SABR(i, :) = E_Truck_Route_SABR(1,:);
+    
+
+
+    tic
+    % Cluster Area Based Routing
+    [E_Tricycle_Route_CABR, E_Truck_Route_CABR, Cluster1, Cluster2] = MainGA_CABR(C, depotCoordinates);
+    E_Tricycle_CABR_Matrix = nodeCoords(Cluster1, E_Tricycle_Route_CABR, depotCoordinates);
+    E_Truck_CABR_Matrix = nodeCoords(Cluster2, E_Truck_Route_CABR, depotCoordinates);
+    % E-Tricycle CABR:
+    for j=1:length(E_Tricycle_CABR_Matrix)-1
+      [E_Tricycle_CABR_Optimal_Path, E_Tricycle_CABR_path_cost(j)] = AStar(E_Tricycle_CABR_Matrix(j, 2), E_Tricycle_CABR_Matrix(j, 3), E_Tricycle_CABR_Matrix(j+1, 2), E_Tricycle_CABR_Matrix(j+1, 3), j, blockLength, blockWidth, streetWidth, length(E_Tricycle_CABR_Matrix));
+    end
+    % E-Truck CABR:
+    for j=1:length(E_Truck_CABR_Matrix)-1
+       [E_Truck_CABR_Optimal_Path, E_Truck_CABR_path_cost(j)] = AStar_2(E_Truck_CABR_Matrix(j, 2), E_Truck_CABR_Matrix(j, 3), E_Truck_CABR_Matrix(j+1, 2), E_Truck_CABR_Matrix(j+1, 3), j, blockLength, blockWidth, streetWidth, length(E_Truck_CABR_Matrix));
+    end
+    % Outputs
+    time_CABR(i) = toc;
+        % Since every execution of CABR has a different amount of customers,
+        % the E-Tricycle and E-Truck matrices have 0's filling up the rest of the
+        % matrices where there are no customers. This is done to keep the
+        % vectors/matrix dimensions consistent when combining all iterations
+        % together.
+    [nc1, ~] = size(Cluster1); % Num of e-tricycle customers (+ 2 depots)
+    [nc2, ~] = size(Cluster2); % Num of e-truck customers (+2 depots)
+    i_E_Tricycle_Route_CABR(i, 1:nc1) = E_Tricycle_Route_CABR;
+    i_E_Truck_Route_CABR(i, 1:nc2) = E_Truck_Route_CABR;
+
+
+    
+   
+
+    % Total path cost and CO2 for TSP
+    Total_Truck_TSP_Path_Cost(i) = sum(Truck_TSP_path_cost);
+    Truck_CO2_TSP(i) = Total_Truck_TSP_Path_Cost(i) * 0.34;
+    Total_Penalty_CO2_TSP(i) = Truck_CO2_TSP(i) / 10;
+    
+    % Total path cost and CO2 for SABR
+    Total_E_Tricycle_SABR_Path_Cost(i) = sum(E_Tricycle_SABR_path_cost);
+    Total_E_Truck_SABR_Path_Cost(i) = sum(E_Truck_SABR_path_cost);
+    E_Tricycle_CO2_SABR(i) = Total_E_Tricycle_SABR_Path_Cost(i) * 0.0249;
+    E_Truck_CO2_SABR(i) = Total_E_Truck_SABR_Path_Cost(i) * 0.15;
+    pathcost_SABR_Array(i) = Total_E_Tricycle_SABR_Path_Cost(i) + Total_E_Truck_SABR_Path_Cost(i);
+    CO2_SABR_Array(i) = E_Tricycle_CO2_SABR(i) + E_Truck_CO2_SABR(i);
+    Penalty_E_Tricycle_CO2_SABR(i) = E_Tricycle_CO2_SABR(i) / 10;
+    Penalty_E_Truck_CO2_SABR(i) = E_Truck_CO2_SABR(i) / 10;
+    Total_Penalty_SABR(i) = Penalty_E_Tricycle_CO2_SABR(i) + Penalty_E_Truck_CO2_SABR(i);
+    Profitability_SABR(i) = Total_Penalty_CO2_TSP(i) - Total_Penalty_SABR(i);
+
+    % Total path cost and CO2 for CABR
+    Total_E_Tricycle_CABR_Path_Cost(i) = sum(E_Tricycle_CABR_path_cost);
+    Total_E_Truck_CABR_Path_Cost(i) = sum(E_Truck_CABR_path_cost);
+    E_Tricycle_CO2_CABR(i) = Total_E_Tricycle_CABR_Path_Cost(i) * 0.0249;
+    E_Truck_CO2_CABR(i) = Total_E_Truck_CABR_Path_Cost(i) * 0.15;
+    pathcost_CABR_Array(i) = Total_E_Tricycle_CABR_Path_Cost(i) + Total_E_Truck_CABR_Path_Cost(i);
+    CO2_CABR_Array(i) = E_Tricycle_CO2_CABR(i) + E_Truck_CO2_CABR(i);   
+    Penalty_E_Tricycle_CO2_CABR(i) = E_Tricycle_CO2_CABR(i) / 10; %
+    Penalty_E_Truck_CO2_CABR(i) = E_Truck_CO2_CABR(i) / 10;
+    Total_Penalty_CABR(i) = Penalty_E_Tricycle_CO2_CABR(i) + Penalty_E_Truck_CO2_CABR(i);
+    Profitability_CABR(i) = Total_Penalty_CO2_TSP(i) - Total_Penalty_CABR(i);
+
+end % ---------------------------------------------------------------------
